@@ -425,18 +425,23 @@ export default function MatchRoomClient({ roomId, venueName, userEmail }: { room
   )
 }
 
+// function AudioControls({ tracksCount }: { tracksCount: number }) {
+//   const { isMicrophoneEnabled, localParticipant, microphoneTrack } = useLocalParticipant()
+//   const tracks = useTracks([Track.Source.Microphone])
+//  const volume = useTrackVolume(
+//   microphoneTrack
+//     ? {
+//         participant: localParticipant,
+//         publication: microphoneTrack,
+//         source: Track.Source.Microphone,
+//       }
+//     : undefined
+// )
+
 function AudioControls({ tracksCount }: { tracksCount: number }) {
   const { isMicrophoneEnabled, localParticipant, microphoneTrack } = useLocalParticipant()
   const tracks = useTracks([Track.Source.Microphone])
- const volume = useTrackVolume(
-  microphoneTrack
-    ? {
-        participant: localParticipant,
-        publication: microphoneTrack,
-        source: Track.Source.Microphone,
-      }
-    : undefined
-)
+  const volume = useTrackVolume(tracks[0] || undefined)
   const setVolume = useAudioStore((state) => state.setVolume)
 
   useEffect(() => {
