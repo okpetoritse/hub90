@@ -9,6 +9,8 @@ import dynamic from 'next/dynamic'
 import { createClient } from '@/utils/supabase/client'
 import { useAudioStore } from '../../store/useAudioStore'
 import HapticVisualizer from '../../components/HapticVisualizer'
+import toast from 'react-hot-toast'
+import { useRouter } from 'next/navigation'
 
 const DigitalChaosPanel = dynamic(() => import('../../components/DigitalChaosPanel'), { ssr: false })
 
@@ -20,12 +22,16 @@ const STICKERS = [
 ]
 
 export default function MatchRoomClient({ roomId, venueName, userEmail }: { roomId: string, venueName: string, userEmail: string }) {
+  const router = useRouter()
   const [token, setToken] = useState("")
   const [username, setUsername] = useState("")
   const [chat, setChat] = useState<{ id: string, user: string, text: string, type: string }[]>([])
   const [freeChatInput, setFreeChatInput] = useState("")
   const [showStickers, setShowStickers] = useState(false)
   const [activeChaos, setActiveChaos] = useState<{ type: string, text: string, user: string } | null>(null)
+  
+  // THE VISUAL EFFECTS STATE
+  const [activeEffect, setActiveEffect] = useState<string>('')
   
   // THE NEW STAGING AREA STATES
   const [isUploading, setIsUploading] = useState(false)
@@ -66,6 +72,16 @@ export default function MatchRoomClient({ roomId, venueName, userEmail }: { room
               user: newReaction.user_id ? 'VIP Fan' : 'Anonymous'
             })
             setTimeout(() => setActiveChaos(null), 5000)
+
+            // Trigger hardware vibration for EVERYONE receiving the payload
+            if (typeof window !== 'undefined' && navigator.vibrate) {
+              if (newReaction.reaction_type === 'MEGAPHONE') navigator.vibrate([100, 50, 100, 50, 100])
+              if (newReaction.reaction_type === 'FLARE') navigator.vibrate([500, 200, 500])
+            }
+
+            // Trigger the screen shake and particles for EVERYONE
+            setActiveEffect(newReaction.reaction_type === 'FLARE' ? 'effect-flare' : 'effect-megaphone')
+            setTimeout(() => setActiveEffect(''), 2500)
           }
 
           setChat((prev) => [...prev, {
@@ -85,7 +101,6 @@ export default function MatchRoomClient({ roomId, venueName, userEmail }: { room
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [chat])
 
-  // NEW: Step 1 - Stage the image locally
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -95,29 +110,24 @@ export default function MatchRoomClient({ roomId, venueName, userEmail }: { room
       return
     }
 
-    // Set the file for upload later, and create a local URL for the UI right now
     setSelectedImage(file)
     setImagePreview(URL.createObjectURL(file))
   }
 
-  // NEW: Allow users to cancel the image attachment
   const clearImage = () => {
     setSelectedImage(null)
     setImagePreview(null)
     if (fileInputRef.current) fileInputRef.current.value = ""
   }
 
-  // UPDATED: Step 2 - Send everything together
   const handleSendFreeChat = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    // Allow sending if there is EITHER text OR a selected image
     if (!freeChatInput.trim() && !selectedImage) return
 
     const msgText = freeChatInput.trim()
     const imgToUpload = selectedImage
 
-    // Instantly clear the UI to make it feel fast for the user
     setFreeChatInput("")
     clearImage()
     setShowStickers(false)
@@ -125,7 +135,6 @@ export default function MatchRoomClient({ roomId, venueName, userEmail }: { room
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
-    // If they attached an image, we upload it first
     if (imgToUpload) {
       setIsUploading(true)
       try {
@@ -142,7 +151,6 @@ export default function MatchRoomClient({ roomId, venueName, userEmail }: { room
           .from('stadium-media')
           .getPublicUrl(fileName)
 
-        // We combine the URL and the text caption using a safe split key
         await supabase.from('fan_reactions').insert({
           match_id: parseInt(roomId) || 0,
           reaction_type: 'PICTURE',
@@ -157,7 +165,6 @@ export default function MatchRoomClient({ roomId, venueName, userEmail }: { room
         setIsUploading(false)
       }
     } else {
-      // If no image, just send standard text
       await supabase.from('fan_reactions').insert({
         match_id: parseInt(roomId) || 0,
         reaction_type: 'STANDARD_CHAT',
@@ -182,18 +189,102 @@ export default function MatchRoomClient({ roomId, venueName, userEmail }: { room
     })
   }
 
+  // THE ACTION ENGINE FOR DIGITAL CHAOS PANEL
+  const firePremiumAction = async (itemType: string, cost: number) => {
+    const toastId = toast.loading(`Activating ${itemType}...`)
+    
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return toast.error("User not found", { id: toastId })
+
+      const res = await fetch('/api/wallet/deduct', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id, itemType, cost })
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        toast.error(data.error || "Transaction failed", { id: toastId })
+        return
+      }
+
+      toast.success(`${itemType} Deployed!`, { id: toastId })
+      router.refresh()
+
+      // Broadcast to the Hub
+      await supabase.from('fan_reactions').insert({
+        match_id: parseInt(roomId) || 0,
+        reaction_type: itemType === 'Global Flare' ? 'FLARE' : 'MEGAPHONE',
+        message: 'INSTANT_CHAOS', 
+        amount_paid_ngn: cost,
+        user_id: user.id
+      })
+
+      if (typeof window !== 'undefined' && navigator.vibrate) {
+        if (itemType === 'Megaphone') navigator.vibrate([100, 50, 100, 50, 100])
+        if (itemType === 'Global Flare') navigator.vibrate([500, 200, 500])
+      }
+
+      setActiveEffect(itemType === 'Global Flare' ? 'effect-flare' : 'effect-megaphone')
+      setTimeout(() => setActiveEffect(''), 2500)
+
+    } catch (err) {
+      toast.error("Network error", { id: toastId })
+    }
+  }
+
   if (token === "") return <div className="flex h-[100dvh] items-center justify-center text-electricLime animate-pulse font-black uppercase tracking-widest bg-black">Connecting to Edge...</div>
 
   return (
-    <div className="flex flex-col h-[100dvh] bg-black text-white overflow-hidden w-full relative">
+    <div className={`flex flex-col h-[100dvh] bg-black text-white overflow-hidden w-full relative ${activeEffect ? 'animate-quake' : ''}`}>
       
+      {/* EXPLODING FLARES VISUALS */}
+      {activeEffect === 'effect-flare' && (
+        <div className="absolute inset-0 z-[100] pointer-events-none overflow-hidden flex justify-center items-end">
+          <div className="absolute inset-0 bg-red-600/30 animate-pulse mix-blend-overlay"></div>
+          {[...Array(30)].map((_, i) => {
+            const randomLeft = 40 + Math.random() * 20;
+            const randomDuration = 0.8 + Math.random() * 0.5;
+            const randomDelay = Math.random() * 0.4;
+            const randomAngle = Math.random() * 60 - 30;
+
+            return (
+              <div
+                key={i}
+                className="absolute bottom-[-20px] w-2 h-16 bg-fireCoral rounded-full blur-[2px] shadow-[0_0_20px_#ff3333]"
+                style={{
+                  left: `${randomLeft}%`,
+                  transformOrigin: 'bottom center',
+                  transform: `rotate(${randomAngle}deg)`,
+                  animation: `shoot-flare ${randomDuration}s cubic-bezier(0.25, 1, 0.5, 1) forwards`,
+                  animationDelay: `${randomDelay}s`,
+                }}
+              />
+            );
+          })}
+        </div>
+      )}
+
+      {/* MEGAPHONE SONIC BOOM VISUALS */}
+      {activeEffect === 'effect-megaphone' && (
+        <div className="absolute inset-0 z-[100] pointer-events-none flex items-center justify-center overflow-hidden">
+          <div className="absolute inset-0 bg-electricLime/10 mix-blend-overlay animate-pulse"></div>
+          <div className="absolute w-32 h-32 border-4 border-electricLime rounded-full animate-ping opacity-80"></div>
+          <div className="absolute w-64 h-64 border-2 border-electricLime rounded-full animate-ping opacity-50" style={{ animationDelay: '0.1s' }}></div>
+          <div className="absolute w-96 h-96 border border-electricLime rounded-full animate-ping opacity-30" style={{ animationDelay: '0.2s' }}></div>
+          <div className="text-[120px] animate-bounce drop-shadow-[0_0_40px_#ccff00]">📢</div>
+        </div>
+      )}
+      
+      {/* ACTIVE CHAOS BANNER */}
       {activeChaos && (
         <div className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none overflow-hidden bg-black/60 backdrop-blur-sm animate-fade-in">
           <div className={`absolute inset-0 opacity-40 blur-3xl ${activeChaos.type === 'FLARE' ? 'bg-fireCoral animate-pulse' : 'bg-electricLime animate-ping'}`}></div>
           <div className={`relative text-center p-8 border-4 transform transition-all animate-bounce ${activeChaos.type === 'FLARE' ? 'border-fireCoral bg-black/80' : 'border-electricLime bg-black/80'}`}>
             <span className="text-6xl mb-4 block">{activeChaos.type === 'FLARE' ? '🧨' : '📢'}</span>
             <span className="text-xs font-black uppercase tracking-widest text-gray-400 block mb-2">{activeChaos.user} Unleashed a {activeChaos.type}</span>
-            <h1 className="text-4xl md:text-6xl font-black uppercase tracking-tighter text-white leading-none">"{activeChaos.text}"</h1>
           </div>
         </div>
       )}
@@ -228,7 +319,6 @@ export default function MatchRoomClient({ roomId, venueName, userEmail }: { room
             <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Live Reactions</span>
           </div>
           {chat.map((msg, idx) => {
-            // UPDATED: We unpack the image URL and the text caption here safely
             const isPicture = msg.type === 'PICTURE';
             const imgUrl = isPicture ? msg.text.split('|SPLIT|')[0] : '';
             const imgCaption = isPicture ? msg.text.split('|SPLIT|')[1] : '';
@@ -249,7 +339,6 @@ export default function MatchRoomClient({ roomId, venueName, userEmail }: { room
                   <div className="flex flex-col items-start gap-1 mt-2 bg-white/5 p-2 rounded-xl border border-white/10 inline-flex">
                     <span className="text-wc-gold font-bold text-[10px] uppercase">{msg.user}:</span>
                     <img src={imgUrl} alt="fan upload" className="max-w-[200px] sm:max-w-xs h-auto object-cover rounded-lg shadow-lg" loading="lazy" />
-                    {/* Render the caption directly below the image if it exists */}
                     {imgCaption && (
                       <span className="text-[12px] text-gray-200 mt-1">{imgCaption}</span>
                     )}
@@ -285,7 +374,6 @@ export default function MatchRoomClient({ roomId, venueName, userEmail }: { room
           </div>
         )}
 
-        {/* THE NEW IMAGE PREVIEW BOX (Sits above the input bar) */}
         {imagePreview && (
           <div className="max-w-md mx-auto mb-2 px-2 animate-fade-in">
             <div className="relative inline-block">
@@ -317,7 +405,6 @@ export default function MatchRoomClient({ roomId, venueName, userEmail }: { room
 
           <input type="text" value={freeChatInput} onChange={(e) => setFreeChatInput(e.target.value)} placeholder="Add a caption..." className="flex-1 bg-white/10 border border-white/10 rounded-full px-4 py-2 text-xs text-white focus:outline-none focus:border-white/30 transition-all" />
           
-          {/* Send button unlocks if there is either text OR an image selected */}
           <button 
             type="submit" 
             disabled={(!freeChatInput.trim() && !selectedImage) || isUploading} 
@@ -330,7 +417,8 @@ export default function MatchRoomClient({ roomId, venueName, userEmail }: { room
 
       <div className="shrink-0 w-full bg-black border-t border-white/5 p-3 pb-safe z-30">
         <div className="w-full max-w-md mx-auto">
-          <DigitalChaosPanel userEmail={userEmail} />
+          {/* 🚨 THE CRITICAL ONACTION PROP IS NOW WIRED HERE 🚨 */}
+          <DigitalChaosPanel userEmail={userEmail} onAction={firePremiumAction} />
         </div>
       </div>
     </div>
