@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { LiveKitRoom, RoomAudioRenderer, useLocalParticipant, useTracks, useTrackVolume } from '@livekit/components-react'
 import '@livekit/components-styles'
-import { Track } from 'livekit-client'
+import { Track, LocalAudioTrack } from 'livekit-client'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { createClient } from '@/utils/supabase/client'
@@ -428,7 +428,7 @@ export default function MatchRoomClient({ roomId, venueName, userEmail }: { room
 function AudioControls({ tracksCount }: { tracksCount: number }) {
   const { isMicrophoneEnabled, localParticipant, microphoneTrack } = useLocalParticipant()
   const tracks = useTracks([Track.Source.Microphone])
-  const volume = useTrackVolume(microphoneTrack?.track)
+ const volume = useTrackVolume(microphoneTrack?.track as LocalAudioTrack | undefined)
   const setVolume = useAudioStore((state) => state.setVolume)
 
   useEffect(() => {
