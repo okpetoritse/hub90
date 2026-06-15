@@ -3,10 +3,11 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> } // 1. Updated type definition to Promise
 ) {
   const supabase = await createClient()
-  const commentId = params.id
+  const { id } = await context.params // 2. Await the promise to get the id
+  const commentId = id
 
   if (!commentId) {
     return NextResponse.json({ error: 'Missing comment ID' }, { status: 400 })

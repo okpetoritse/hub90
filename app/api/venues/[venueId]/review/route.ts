@@ -3,10 +3,10 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { venueId: string } }
+  context: { params: Promise<{ venueId: string }> }
 ) {
   const supabase = await createClient()
-  const venueId = params.venueId
+  const { venueId } = await context.params;
   const { reviewerEmail, rating, reviewText } = await request.json()
 
   if (!reviewerEmail || !rating) {
@@ -69,10 +69,10 @@ export async function POST(
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { venueId: string } }
+  context: { params: Promise<{ venueId: string }> }
 ) {
   const supabase = await createClient()
-  const venueId = params.venueId
+  const { venueId } = await context.params
 
   try {
     const { data, error } = await supabase

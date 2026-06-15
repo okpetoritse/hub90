@@ -4,10 +4,11 @@
 // ============================================
 
 const API_BASE = 'https://free-api-live-football-data.p.rapidapi.com'
-const API_KEY = process.env.NEXT_PUBLIC_FOOTBALL_API_KEY
+const API_KEY = process.env.NEXT_PUBLIC_FOOTBALL_API_KEY || ''
 const API_HOST = 'free-api-live-football-data.p.rapidapi.com'
 
-const USE_REAL_API = API_KEY && API_KEY !== 'demo-key'
+// New bulletproof line: strictly guarantees a boolean true or false
+const USE_REAL_API = Boolean(API_KEY && API_KEY !== 'demo-key')
 
 // League IDs from the API
 export const LEAGUE_IDS = {

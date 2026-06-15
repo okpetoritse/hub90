@@ -3,10 +3,10 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { venueId: string } }
+  context: { params: Promise<{ venueId: string }> }
 ) {
   const supabase = await createClient()
-  const venueId = params.venueId
+  const { venueId } = await context.params;
   const { followerEmail } = await request.json()
 
   if (!followerEmail) {

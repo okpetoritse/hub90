@@ -77,7 +77,7 @@ export class VoiceRecorder {
 export const playVoiceComment = (voiceUrl: string): Promise<void> => {
   return new Promise((resolve, reject) => {
     const audio = new Audio(voiceUrl)
-    audio.onended = resolve
+    audio.onended = () => resolve()
     audio.onerror = () => reject(new Error('Failed to play audio'))
     audio.play().catch(reject)
   })

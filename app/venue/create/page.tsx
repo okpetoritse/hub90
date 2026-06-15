@@ -43,7 +43,7 @@ export default function CreateVenuePage() {
     const { name, value } = e.target
     setFormData((prev) => ({
       ...prev,
-      [name]: name === 'capacity' ? parseInt(value) || '' : value,
+      [name]:  value,
     }))
   }
 
@@ -58,14 +58,19 @@ export default function CreateVenuePage() {
       return
     }
 
-    try {
-      const success = await createNewVenue(formData)
-      if (success) {
-        router.push('/venue/dashboard')
-      } else {
-        setError('Failed to create venue')
-      }
-    } catch (err) {
+   try {
+  // Extract and format capacity safely for the backend schema
+  const success = await createNewVenue({
+    ...formData,
+    capacity: formData.capacity ? parseInt(formData.capacity, 10) : undefined,
+  })
+  
+  if (success) {
+    router.push('/venue/dashboard')
+  } else {
+    setError('Failed to create venue')
+  }
+} catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred')
     } finally {
       setLoading(false)

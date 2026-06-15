@@ -20,7 +20,9 @@ export default function HapticFeedback({
     if (onHaptic === 'custom' && pattern) {
       haptics.custom(pattern)
     } else {
-      haptics[onHaptic as keyof typeof haptics]?.()
+      // Cast the dynamic method to a zero-argument function to clear the error
+      const trigger = haptics[onHaptic as keyof typeof haptics] as (() => void) | undefined
+      trigger?.()
     }
   }
 
@@ -28,10 +30,13 @@ export default function HapticFeedback({
     return <span onClick={handleClick}>{children}</span>
   }
 
-  return React.cloneElement(children as React.ReactElement, {
+  // 1. Cast explicitly to <any> to allow property extensions like onClick
+  const childElement = children as React.ReactElement<any>
+
+  return React.cloneElement(childElement, {
     onClick: (e: React.MouseEvent) => {
       handleClick(e)
-      ;(children as React.ReactElement).props.onClick?.(e)
+      childElement.props.onClick?.(e) // 2. Safely read original onClick if it exists
     },
   })
 }

@@ -46,9 +46,18 @@ export default function TeamHubPage() {
         }
 
         const playersData = await getPlayers(parseInt(teamId))
-        if (playersData) {
-          setPlayers(playersData as Player[])
-        }
+if (playersData) {
+  // Cleanly map API properties to your Component's expected Player type
+  const mappedPlayers: Player[] = playersData.map((player: any) => ({
+    id: player.id,
+    player_name: player.name,
+    jersey_number: player.number || 0, // Fallback if number is undefined
+    position: player.position || 'Unknown',
+    nationality: player.nationality || 'Unknown',
+  }))
+  
+  setPlayers(mappedPlayers)
+}
       } catch (error) {
         console.error('Error fetching team:', error)
       } finally {
@@ -456,7 +465,7 @@ export default function TeamHubPage() {
         <Link
           href="/"
           style={{
-            display: 'inline-block',
+            // display: 'inline-block',
             padding: 'clamp(14px, 2vw, 16px) clamp(28px, 5vw, 40px)',
             background: `linear-gradient(135deg, ${team.primary_color} 0%, ${team.secondary_color} 100%)`,
             color: DESIGN_SYSTEM.colors.text,

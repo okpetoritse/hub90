@@ -3,10 +3,10 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { venueId: string } }
+  context: { params: Promise<{ venueId: string }> }
 ) {
   const supabase = await createClient()
-  const venueId = params.venueId
+  const { venueId } = await context.params;
 
   try {
     const { data, error } = await supabase
@@ -31,10 +31,10 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { venueId: string } }
+  context: { params: Promise<{ venueId: string }> }
 ) {
   const supabase = await createClient()
-  const venueId = params.venueId
+  const { venueId } = await context.params;
   const updates = await request.json()
 
   // Don't allow direct status changes
@@ -67,10 +67,10 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { venueId: string } }
+  context: { params: Promise<{ venueId: string }> }
 ) {
   const supabase = await createClient()
-  const venueId = params.venueId
+  const { venueId } = await context.params
 
   try {
     const { error } = await supabase

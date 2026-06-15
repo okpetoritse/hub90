@@ -3,10 +3,10 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { venueId: string } }
+  context: { params: Promise<{ venueId: string }> }
 ) {
   const supabase = await createClient()
-  const venueId = params.venueId
+  const { venueId } = await context.params
   const days = request.nextUrl.searchParams.get('days') || '30'
 
   try {
@@ -32,10 +32,10 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { venueId: string } }
+  context: { params: Promise<{ venueId: string }> }
 ) {
   const supabase = await createClient()
-  const venueId = params.venueId
+  const { venueId } = await context.params
   const statsData = await request.json()
 
   try {

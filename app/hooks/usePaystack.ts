@@ -16,29 +16,53 @@ export function usePaystack() {
   const fundWallet = useCallback(async (amount: number, email: string) => {
     return new Promise<{success: boolean, newBalance: number, reference: string}>((resolve, reject) => {
       console.log('🎬 [1] Starting Paystack')
-      
-      if (!window.PaystackPop) {
-        console.log('🎬 [2] Loading Paystack script')
-        const script = document.createElement('script')
-        script.src = 'https://js.paystack.co/v1/inline.js'
-        script.async = true
-        
-        script.onload = () => {
-          console.log('✅ [3] Script loaded')
-          setTimeout(() => openPaystack(), 300)
-        }
-        
-        script.onerror = () => {
-          console.error('❌ [ERROR] Script load failed')
-          reject(new Error('Paystack script failed'))
-        }
-        
-        document.head.appendChild(script)
-      } else {
-        console.log('✅ [2] Script already loaded')
-        openPaystack()
-      }
 
+      // 1. Define verification logic first
+      const verifyAndUpdate = async (userId: string, amount: number) => {
+        try {
+          console.log('🔄 [7] Calling verify API...')
+          console.log('   userId:', userId)
+          console.log('   amount:', amount)
+
+          const response = await fetch('/api/wallet/verify-payment', {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              userId: userId,
+              amount: amount
+            })
+          })
+
+          console.log('🔄 [8] Response status:', response.status)
+
+          const data = await response.json()
+          console.log('🔄 [9] Response data:', data)
+
+          if (!response.ok) {
+            console.error('❌ [10] API error:', data.error)
+            reject(new Error(data.error))
+            return
+          }
+
+          console.log('✅ [11] SUCCESS! New balance:', data.newBalance)
+          localStorage.setItem('hub90_wallet_balance', data.newBalance.toString())
+
+          resolve({
+            success: true,
+            newBalance: data.newBalance,
+            reference: 'ref-success'
+          })
+
+        } catch (error: any) {
+          console.error('❌ [ERROR in verifyAndUpdate]:', error.message)
+          console.error('Full error:', error)
+          reject(error)
+        }
+      }
+      
+      // 2. Define modal opener logic second (so it can see verifyAndUpdate)
       const openPaystack = async () => {
         try {
           console.log('🎬 [3] Opening modal')
@@ -86,49 +110,29 @@ export function usePaystack() {
         }
       }
 
-      const verifyAndUpdate = async (userId: string, amount: number) => {
-        try {
-          console.log('🔄 [7] Calling verify API...')
-          console.log('   userId:', userId)
-          console.log('   amount:', amount)
-
-          const response = await fetch('/api/wallet/verify-payment', {
-            method: 'POST',
-            headers: { 
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              userId: userId,
-              amount: amount
-            })
-          })
-
-          console.log('🔄 [8] Response status:', response.status)
-
-          const data = await response.json()
-          console.log('🔄 [9] Response data:', data)
-
-          if (!response.ok) {
-            console.error('❌ [10] API error:', data.error)
-            reject(new Error(data.error))
-            return
-          }
-
-          console.log('✅ [11] SUCCESS! New balance:', data.newBalance)
-          localStorage.setItem('hub90_wallet_balance', data.newBalance.toString())
-
-          resolve({
-            success: true,
-            newBalance: data.newBalance,
-            reference: 'ref-success'
-          })
-
-        } catch (error: any) {
-          console.error('❌ [ERROR in verifyAndUpdate]:', error.message)
-          console.error('Full error:', error)
-          reject(error)
+      // 3. Execution block happens last (now it can safely use openPaystack)
+      if (!window.PaystackPop) {
+        console.log('🎬 [2] Loading Paystack script')
+        const script = document.createElement('script')
+        script.src = 'https://js.paystack.co/v1/inline.js'
+        script.async = true
+        
+        script.onload = () => {
+          console.log('✅ [3] Script loaded')
+          setTimeout(() => openPaystack(), 300)
         }
+        
+        script.onerror = () => {
+          console.error('❌ [ERROR] Script load failed')
+          reject(new Error('Paystack script failed'))
+        }
+        
+        document.head.appendChild(script)
+      } else {
+        console.log('✅ [2] Script already loaded')
+        openPaystack()
       }
+
     })
   }, [supabase])
 

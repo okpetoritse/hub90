@@ -43,7 +43,7 @@ export default function TeamBrowser() {
         console.log('🏈 ' + getAPIStatus())
         
         const data = await fetchAllTeams()
-        setTeams(data as Team[])
+        setTeams(data as unknown as Team[])
       } catch (error) {
         console.error('Error fetching teams:', error)
       } finally {
