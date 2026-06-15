@@ -9,7 +9,6 @@ export default function GoogleLoginButton() {
     await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        // This tells Supabase to send the user to the callback route we just built
         redirectTo: `${window.location.origin}/auth/callback`,
       },
     });
@@ -18,14 +17,18 @@ export default function GoogleLoginButton() {
   return (
     <button 
       onClick={handleGoogleLogin} 
-      className="flex items-center justify-center gap-3 w-full sm:w-auto bg-white text-black font-black uppercase tracking-widest py-4 px-8 rounded-full hover:bg-gray-200 transition-all shadow-[0_0_20px_rgba(255,255,255,0.2)] active:scale-[0.98]"
+      type="button"
+      className="flex-1 min-w-0 h-14 bg-[#1C1C1E] rounded-2xl border border-white/5 flex items-center justify-center gap-2 hover:bg-[#2C2C2E] transition-colors overflow-hidden shrink-0"
     >
+      {/* THE FIX: Forced inline styles. The browser has no choice but to make it 24x24 pixels. */}
       <img 
         src="https://www.svgrepo.com/show/475656/google-color.svg" 
         alt="Google" 
-        className="w-5 h-5" 
+        width={24}
+        height={24}
+        style={{ width: '24px', height: '24px', objectFit: 'contain', flexShrink: 0 }} 
       />
-      Enter with Google
+      <span className="text-sm font-medium text-white truncate">Google</span>
     </button>
   );
 }

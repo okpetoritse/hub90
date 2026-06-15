@@ -1,54 +1,85 @@
-import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { NextRequest, NextResponse } from 'next/server'
 
+// ✅ FIX: Use service role to bypass RLS
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-export async function POST(req: Request) {
+export async function POST(request: NextRequest) {
   try {
-    const { userId, itemType, cost } = await req.json()
+    const { userId, itemType, cost } = await request.json()
 
-    // 1. Calculate the user's current exact balance
-    const { data: ledger } = await supabaseAdmin
-      .from('ledger_entries')
-      .select('amount, transaction_type')
-      .eq('account_id', userId)
-
-    if (!ledger) {
-      return NextResponse.json({ error: 'Wallet not found' }, { status: 404 })
+    if (!userId || !itemType || !cost) {
+      return NextResponse.json(
+        { error: 'Missing required fields' },
+        { status: 400 }
+      )
     }
 
-    // Sum deposits, subtract purchases
-    const balance = ledger.reduce((acc, tx) => {
-      return acc + (tx.transaction_type === 'DEPOSIT' ? tx.amount : -tx.amount)
-    }, 0)
+    console.log(`💳 Deducting ₦${cost} from user ${userId} for ${itemType}`)
 
-    // 2. The Bounce Check (Do they have enough NGN?)
-    if (balance < cost) {
-      return NextResponse.json({ error: 'Insufficient funds' }, { status: 402 })
+    // Step 1: Get current wallet balance from wallets table
+    const { data: wallet, error: fetchError } = await supabaseAdmin
+      .from('wallets')
+      .select('balance')
+      .eq('user_id', userId)
+      .single()
+
+    if (fetchError) {
+      console.error('Fetch wallet error:', fetchError)
+      return NextResponse.json(
+        { error: 'Wallet not found. Please fund your wallet first.' },
+        { status: 404 }
+      )
     }
 
-    // 3. Mint the Deduction (Charge the account)
-    // @ts-ignore - Bypassing local schema cache warnings
-    const { error: insertError } = await supabaseAdmin
-      .from('ledger_entries')
-      .insert({
-        account_id: userId,
-        amount: -cost,
-        transaction_type: 'PURCHASE',
-        reference: `HUB90_TX_${crypto.randomUUID()}`,
-        description: `${itemType} Activation`,
-        transaction_group_id: crypto.randomUUID()
+    const currentBalance = wallet?.balance || 0
+    console.log(`Current balance: ₦${currentBalance}`)
+
+    // Step 2: Check if user has enough balance
+    if (currentBalance < cost) {
+      console.error(`Insufficient balance: ₦${currentBalance} < ₦${cost}`)
+      return NextResponse.json(
+        { error: `Insufficient balance. You have ₦${currentBalance}, but need ₦${cost}` },
+        { status: 402 }
+      )
+    }
+
+    // Step 3: Deduct from wallet
+    const newBalance = currentBalance - cost
+    console.log(`New balance after deduction: ₦${newBalance}`)
+
+    const { error: updateError } = await supabaseAdmin
+      .from('wallets')
+      .update({
+        balance: newBalance,
+        updated_at: new Date().toISOString()
       })
+      .eq('user_id', userId)
 
-    if (insertError) throw insertError
+    if (updateError) {
+      console.error('Update wallet error:', updateError)
+      return NextResponse.json(
+        { error: 'Failed to process payment' },
+        { status: 500 }
+      )
+    }
 
-    return NextResponse.json({ success: true, newBalance: balance - cost })
+    console.log(`✅ Successfully deducted ₦${cost}`)
+
+    return NextResponse.json({
+      success: true,
+      newBalance,
+      message: `${itemType} activated! Balance: ₦${newBalance}`
+    })
 
   } catch (error) {
-    console.error("Deduction Error:", error)
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
+    console.error('Deduct error:', error)
+    return NextResponse.json(
+      { error: 'Server error' },
+      { status: 500 }
+    )
   }
 }

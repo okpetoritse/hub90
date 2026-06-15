@@ -1,74 +1,203 @@
-@import "tailwindcss";
+/* Global Styles - World Cup Theme - Fully Responsive */
 
-@theme {
-  --color-wc-black: #050505;
-  --color-wc-dark: #121212;
-  --color-wc-gold: #EEB624; /* Official FIFA Gold */
-  --color-wc-green: #00B140; /* Official FIFA Green */
-  --color-wc-glass: rgba(255, 255, 255, 0.03);
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 body {
-  background-color: var(--color-wc-black);
-  background-image: radial-gradient(circle at top right, #1a1a1a, #050505);
-  background-attachment: fixed;
-  color: white;
+  background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 100%);
+  color: #ffffff;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  line-height: 1.6;
+  overflow-x: hidden;
 }
 
-/* Premium Glassmorphism for the Cards */
-.glass-card {
-  background: var(--color-wc-glass);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+/* TYPOGRAPHY - Mobile First */
+h1 {
+  font-size: clamp(24px, 6vw, 40px);
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  margin-bottom: 1rem;
 }
 
-/* --- PREMIUM ACTION EFFECTS --- */
-
-/* The Megaphone Earthquake */
-@keyframes violent-shake {
-  0% { transform: translate(1px, 1px) rotate(0deg); }
-  10% { transform: translate(-1px, -2px) rotate(-1deg); }
-  20% { transform: translate(-3px, 0px) rotate(1deg); }
-  30% { transform: translate(3px, 2px) rotate(0deg); }
-  40% { transform: translate(1px, -1px) rotate(1deg); }
-  50% { transform: translate(-1px, 2px) rotate(-1deg); }
-  60% { transform: translate(-3px, 1px) rotate(0deg); }
-  70% { transform: translate(3px, 1px) rotate(-1deg); }
-  80% { transform: translate(-1px, -1px) rotate(1deg); }
-  90% { transform: translate(1px, 2px) rotate(0deg); }
-  100% { transform: translate(1px, -2px) rotate(-1deg); }
+h2 {
+  font-size: clamp(20px, 5vw, 32px);
+  font-weight: 700;
+  margin-bottom: 0.875rem;
 }
 
-.effect-megaphone {
-  animation: violent-shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
+h3 {
+  font-size: clamp(16px, 4vw, 24px);
+  font-weight: 600;
+  margin-bottom: 0.75rem;
 }
 
-/* The Global Flare Flashbang */
-@keyframes stadium-flare {
-  0% { box-shadow: inset 0 0 0px rgba(255, 50, 50, 0); }
-  20% { box-shadow: inset 0 0 150px rgba(255, 50, 50, 0.8); background-color: rgba(255,0,0,0.2); }
-  100% { box-shadow: inset 0 0 0px rgba(255, 50, 50, 0); background-color: transparent; }
+p {
+  font-size: clamp(14px, 3.5vw, 16px);
+  line-height: 1.6;
+  color: #b0b8d4;
 }
 
-.effect-flare {
-  animation: stadium-flare 1.5s ease-out both;
+small {
+  font-size: clamp(12px, 3vw, 14px);
 }
 
-/* THE HARDWARE FALLBACK (Screen Quake) */
-@keyframes violent-quake {
-  0%, 100% { transform: translateX(0) translateY(0); }
-  20%, 60% { transform: translateX(-8px) translateY(4px) rotate(-1deg); }
-  40%, 80% { transform: translateX(8px) translateY(-4px) rotate(1deg); }
+/* CONTAINERS - Responsive */
+.container {
+  width: 100%;
+  padding: 0 clamp(12px, 5vw, 32px);
+  margin: 0 auto;
+  max-width: 100%;
 }
 
-/* THE PARTICLE PHYSICS */
-@keyframes shoot-flare {
-  0% { transform: translateY(0) scaleY(1); opacity: 1; }
-  100% { transform: translateY(-120vh) scaleY(2); opacity: 0; }
+@media (min-width: 768px) {
+  .container {
+    max-width: 750px;
+  }
 }
 
-.animate-quake {
-  animation: violent-quake 0.4s ease-in-out infinite;
+@media (min-width: 1024px) {
+  .container {
+    max-width: 960px;
+  }
+}
+
+@media (min-width: 1440px) {
+  .container {
+    max-width: 1320px;
+  }
+}
+
+/* BUTTONS - Responsive Touch Targets */
+button, a.button {
+  min-height: 44px;
+  min-width: 44px;
+  padding: clamp(8px, 2vw, 12px) clamp(16px, 4vw, 24px);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 150ms ease-out;
+  font-size: clamp(12px, 3vw, 14px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(4px, 1vw, 8px);
+}
+
+button:hover {
+  transform: translateY(-2px);
+}
+
+button:active {
+  transform: translateY(0);
+}
+
+/* INPUT FIELDS - Responsive */
+input, textarea, select {
+  width: 100%;
+  padding: clamp(8px, 2vw, 12px);
+  border: 1px solid #2a3156;
+  border-radius: 8px;
+  background: #1f2650;
+  color: #ffffff;
+  font-size: clamp(14px, 3.5vw, 16px);
+  font-family: inherit;
+  transition: border-color 150ms ease-out;
+}
+
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  border-color: #ffd700;
+  box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.1);
+}
+
+/* SCROLLBAR - Hidden on mobile, visible on desktop */
+@media (max-width: 768px) {
+  ::-webkit-scrollbar {
+    display: none;
+  }
+  
+  * {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+@media (min-width: 768px) {
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background: #2a3156;
+    border-radius: 4px;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background: #3a4166;
+  }
+}
+
+/* UTILITY CLASSES - Responsive */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Safe area padding for notched devices */
+@supports (padding: max(0px)) {
+  body {
+    padding-left: max(12px, env(safe-area-inset-left));
+    padding-right: max(12px, env(safe-area-inset-right));
+  }
+}
+
+/* Animations */
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.animate-slide-up {
+  animation: slideUp 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
 }
